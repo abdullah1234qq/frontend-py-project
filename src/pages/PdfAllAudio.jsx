@@ -54,12 +54,13 @@ export function PdfAllAudio() {
         copy="Generate multi-language audio from a single PDF."
       />
       <NeonHeroMark tone="pink" />
-      <FileUploader
-        accept="application/pdf"
-        label="Upload a PDF document"
-        helper="Extract text and create a ZIP file"
-        onFile={setFile}
-      />
+     <FileUploader
+  accept="application/pdf"
+  label="Upload PDF"
+  helper="PDF file"
+  onFile={setFile}
+  file={file}
+/>
       <GlowButton tone="pink" onClick={generateAllAudio} disabled={busy}>
         {busy ? "Generating ZIP..." : "Generate Multi-Language Audio ZIP"}
       </GlowButton>

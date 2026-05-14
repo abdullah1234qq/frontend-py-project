@@ -19,6 +19,7 @@ export function Realtime() {
   const [audioUrl, setAudioUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -27,7 +28,10 @@ export function Realtime() {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
-      mediaRecorderRef.current?.stop();
+
+      if (mediaRecorderRef.current?.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
     };
   }, []);
 
@@ -37,11 +41,19 @@ export function Realtime() {
     setOriginalText("");
     setTranslatedText("");
     setAudioUrl("");
+    setAudioChunks([]);
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+
       streamRef.current = stream;
-      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType: "audio/webm",
+      });
+
       const chunks = [];
 
       recorder.addEventListener("dataavailable", (event) => {
@@ -55,9 +67,11 @@ export function Realtime() {
       });
 
       recorder.start();
+
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
     } catch (error) {
+      console.error(error);
       setRecordingError("Unable to access microphone.");
     }
   }
@@ -66,10 +80,12 @@ export function Realtime() {
     if (mediaRecorderRef.current?.state === "recording") {
       mediaRecorderRef.current.stop();
     }
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+
     setIsRecording(false);
   }
 
@@ -78,28 +94,49 @@ export function Realtime() {
       setMessage("Record audio before translating.");
       return;
     }
+
     setLoading(true);
     setMessage("");
+
     try {
-      const blob = new Blob(audioChunks, { type: "audio/webm" });
+      const blob = new Blob(audioChunks, {
+        type: "audio/webm",
+      });
+
       const formData = new FormData();
+
       formData.append("file", blob, "realtime.webm");
       formData.append("language", language);
 
-      const response = await api.post("/transcribe", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      // FIXED ROUTE
+      const response = await api.post("/realtime", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      const url = `${API_URL}${response.data.audio_url}`;
-      setAudioUrl(url);
+      console.log("Realtime response:", response.data);
+
+      // Handle audio URL safely
+      if (response.data.audio_url) {
+        const fullAudioUrl = response.data.audio_url.startsWith("http")
+          ? response.data.audio_url
+          : `${API_URL}${response.data.audio_url}`;
+
+        setAudioUrl(fullAudioUrl);
+      }
+
       setOriginalText(response.data.original_text || "");
       setTranslatedText(response.data.translated_text || "");
+
       setMessage("Realtime translation complete.");
     } catch (error) {
+      console.error("Realtime API Error:", error);
+
       setMessage(
         error.response?.data?.detail ||
           error.message ||
-          "Realtime conversion failed.",
+          "Realtime conversion failed."
       );
     } finally {
       setLoading(false);
@@ -112,10 +149,13 @@ export function Realtime() {
         title="Realtime Speech"
         copy="Record live speech, translate it, and download the audio."
       />
+
       <NeonHeroMark mode="mic" tone="green" />
+
       <div className="form-grid one">
         <label>
           <span>Target Language</span>
+
           <select
             value={language}
             onChange={(event) => setLanguage(event.target.value)}
@@ -130,6 +170,7 @@ export function Realtime() {
           </select>
         </label>
       </div>
+
       <div className="record-controls">
         <GlowButton
           tone={isRecording ? "red" : "green"}
@@ -137,7 +178,11 @@ export function Realtime() {
         >
           {isRecording ? "Stop Recording" : "Start Recording"}
         </GlowButton>
-        <GlowButton onClick={translateSpeech} disabled={isRecording || loading}>
+
+        <GlowButton
+          onClick={translateSpeech}
+          disabled={isRecording || loading}
+        >
           {loading ? "Translating..." : "Translate Audio"}
         </GlowButton>
       </div>
@@ -145,6 +190,7 @@ export function Realtime() {
       {audioUrl ? (
         <div className="audio-preview">
           <AudioPlayer sourceUrl={audioUrl} />
+
           <DownloadButton
             url={audioUrl}
             filename="realtime-translation.mp3"
@@ -156,18 +202,34 @@ export function Realtime() {
       ) : null}
 
       {originalText ? (
-        <TranscriptCard title="Recognized Text" content={originalText} />
+        <TranscriptCard
+          title="Recognized Text"
+          content={originalText}
+        />
       ) : null}
+
       {translatedText ? (
-        <TranscriptCard title="Translated Text" content={translatedText} />
+        <TranscriptCard
+          title="Translated Text"
+          content={translatedText}
+        />
       ) : null}
+
       {recordingError ? (
-        <p className="status-line error">{recordingError}</p>
+        <p className="status-line error">
+          {recordingError}
+        </p>
       ) : null}
+
       {message ? (
         <StatusAlert
           message={message}
-          type={message.toLowerCase().includes("failed") ? "error" : "success"}
+          type={
+            message.toLowerCase().includes("failed") ||
+            message.toLowerCase().includes("error")
+              ? "error"
+              : "success"
+          }
         />
       ) : null}
     </div>

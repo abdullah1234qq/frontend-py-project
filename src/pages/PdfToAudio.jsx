@@ -51,36 +51,6 @@ export function PdfToAudio() {
     }
   }
 
-  async function generateAllAudio() {
-    if (!file) {
-      setMessage("Choose a PDF first.");
-      return;
-    }
-    setZipBusy(true);
-    setMessage("");
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await api.post("/pdf-to-all-audio", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      const url = `${API_URL}${response.data.zip_url}`;
-      setOriginalText(response.data.original_text || "");
-      setMessage("ZIP ready.");
-      // ZIP will be downloaded via the DownloadButton below when available
-      setAudioUrl("");
-      setTimeout(() => setMessage(""), 3200);
-    } catch (error) {
-      setMessage(
-        error.response?.data?.detail ||
-          error.message ||
-          "ZIP generation failed.",
-      );
-    } finally {
-      setZipBusy(false);
-    }
-  }
 
   return (
     <div className="work-page">
@@ -90,11 +60,12 @@ export function PdfToAudio() {
       />
       <NeonHeroMark tone="green" />
       <FileUploader
-        accept="application/pdf"
-        label="Upload a PDF document"
-        helper="Readable PDFs work best"
-        onFile={setFile}
-      />
+  accept="application/pdf"
+  label="Tap to upload PDF"
+  helper="PDF up to 200MB"
+  onFile={setFile}
+  file={file}
+/>
       <div className="form-grid one">
         <label>
           <span>Language</span>
@@ -134,13 +105,6 @@ export function PdfToAudio() {
         </DownloadButton>
       </div>
 
-      <button
-        className="secondary-action"
-        onClick={generateAllAudio}
-        disabled={zipBusy}
-      >
-        {zipBusy ? "Building ZIP..." : "Generate All Languages"}
-      </button>
 
       {originalText ? (
         <TranscriptCard title="Original Text" content={originalText} />
