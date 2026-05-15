@@ -1,7 +1,10 @@
 # Using Android gitignore template: https://github.com/github/gitignore/blob/HEAD/Android.gitignore
 
+# Built application files
 
-
+*.aar
+*.ap_
+*.aab
 
 # Files for the ART/Dalvik VM
 *.dex
@@ -18,7 +21,7 @@ out/
 
 # Gradle files
 .gradle/
-build/
+
 
 # Local configuration file (sdk path, etc)
 local.properties
